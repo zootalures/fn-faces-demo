@@ -1,7 +1,7 @@
 schema_version: 20180708
 name: faces
-version: 0.0.1
+version: 0.0.4
 runtime: java
-memory: 512
 cmd: com.example.fn.FacesFunctions::handleRequest
 format: http-stream
+memory: 512

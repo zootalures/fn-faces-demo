@@ -47,7 +47,7 @@ public class FacesFunctionsTest {
         testing.thenRun(FacesFunctions.class, "handleRequest");
 
         FnResult result = testing.getOnlyResult();
-        assertEquals("found 1 faces on object foo", result.getBodyAsString());
+        assertEquals("found 3 faces on object image2.png", result.getBodyAsString());
     }
 
 }

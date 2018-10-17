@@ -26,10 +26,12 @@
 
     <dependencies>
 
+        <!-- This is provided as we munge around with the jar during build to get the native parts into the main FS and reduce the build size  -->
         <dependency>
             <groupId>org.openpnp</groupId>
             <artifactId>opencv</artifactId>
             <version>3.2.0-0</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

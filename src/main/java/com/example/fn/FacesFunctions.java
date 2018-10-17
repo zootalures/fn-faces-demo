@@ -112,7 +112,7 @@ public class FacesFunctions {
             g.drawImage(sombrero, (int)((double)r.x - ((hatWidth - r.width)/2.0)), r.y - (int)hatHeight +(r.height/5), (int)hatWidth,(int)hatHeight, null);
         }
         g.dispose();
-        ImageIO.write(img, "jpg", new File("output.jpg"));
+        ImageIO.write(img, "jpg", new File("/tmp/output.jpg"));
 
         return "found " + rects.size() + " faces on object " + event.getObjectName();
 
