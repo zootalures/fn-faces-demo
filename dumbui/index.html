@@ -1,0 +1,65 @@
+<html>
+<body>
+<video id="player" controls autoplay></video>
+<button id="capture">Capture</button>
+<canvas id="canvas" width=320 height=240></canvas>
+<script>
+    const player = document.getElementById('player');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    const captureButton = document.getElementById('capture');
+
+    const constraints = {
+        video: true,
+    };
+
+    function guid() {
+        function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000)
+                .toString(16)
+                .substring(1);
+        }
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+    }
+
+    captureButton.addEventListener('click', () => {
+        // Draw the video frame to the canvas.
+        context.drawImage(player, 0, 0, canvas.width, canvas.height);
+
+        let dataUrl = canvas.toDataURL("image/jpeg");
+        console.log("dataUrl",dataUrl);
+        let byteString = atob(dataUrl.split(',')[1]);
+
+        // write the bytes of the string to an ArrayBuffer
+        var ab = new ArrayBuffer(byteString.length);
+
+        // create a view into the buffer
+        var ia = new Uint8Array(ab);
+
+        // set the bytes of the buffer to the correct values
+        for (var i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+
+        // write the ArrayBuffer to a blob, and you're done
+        var blob = new Blob([ab], {type: "image/jpeg"});
+
+        var oReq = new XMLHttpRequest();
+        let fileId = guid() + ".jpg"
+        oReq.open("PUT", "https://objectstorage.us-phoenix-1.oraclecloud.com/p/svXDK-D4uP32oAq7jeewFg9oYfGimAZnWVmLIjBonA0/n/ocimiddleware/b/facedetection-incoming/o/" + fileId, true);
+        oReq.onload = function (oEvent) {
+            console.log("Uploaded",fileId)
+        };
+
+        oReq.send(blob);
+    });
+
+    // Attach the video stream to the video element and autoplay.
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then((stream) => {
+            player.srcObject = stream;
+        });
+</script>
+
+</body>
+</html>
