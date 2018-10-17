@@ -25,8 +25,9 @@ FROM fnproject/fn-java-fdk:jdk9-1.0.75
 WORKDIR /function
 
 #COPY --from=opencv-build-base /build/opencv-3.2.0/build/lib/* /usr/local/lib/
-COPY --from=build-stage /usr/lib/libopencv_java320.so /usr/lib
+COPY --from=build-stage /usr/lib/libopencv_java320.so /function/runtime/lib
 COPY --from=build-stage /opencv/opencv_min.jar /function/app/
 COPY --from=build-stage /function/target/*.jar /function/app/
 COPY data /function/data
+COPY testdata /function/testdata
 CMD ["com.example.fn.FacesFunctions::handleRequest"]

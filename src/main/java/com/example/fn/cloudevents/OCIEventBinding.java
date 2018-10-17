@@ -20,7 +20,7 @@ public class OCIEventBinding implements InputCoercion<Object> {
     public Optional<Object> tryCoerceParam(InvocationContext invocationContext, int i, InputEvent inputEvent, MethodWrapper methodWrapper) {
 
         TypeWrapper paramType = methodWrapper.getParamType(i);
-        if (ObjectStorageObjectEvent.class.equals(paramType.getParameterClass())) {
+        if (CloudEvent.class.equals(paramType.getParameterClass()) || ObjectStorageObjectEvent.class.equals(paramType.getParameterClass())) {
             // TODO, verify content type etc.
             CloudEvent ce = inputEvent.consumeBody((is) -> {
                   try {
@@ -31,11 +31,22 @@ public class OCIEventBinding implements InputCoercion<Object> {
               }
             );
 
-            // TODO verify/dispatch on event type
-            try{
-                return Optional.of(myObjectMapper.treeToValue(ce.data,ObjectStorageObjectEvent.class));
-            }catch(JsonProcessingException e){
-                throw new RuntimeException("Failed to read object event");
+            if (CloudEvent.class.equals(paramType.getParameterClass())){
+                return Optional.of(ce);
+            }
+            if (ce.data.isObject()) {
+                // TODO verify/dispatch on event type
+                try{
+                    return Optional.of(myObjectMapper.treeToValue(ce.data,ObjectStorageObjectEvent.class));
+                }catch(JsonProcessingException e){
+                    throw new RuntimeException("Failed to read object event",e);
+                }
+            }else if (ce.data.isTextual()){
+                try{
+                    return Optional.of(myObjectMapper.readValue(ce.data.asText(),ObjectStorageObjectEvent.class));
+                }catch(Exception e){
+                    throw new RuntimeException("Failed to read object event",e);
+                }
             }
 
         }
