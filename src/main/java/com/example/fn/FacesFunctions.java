@@ -27,6 +27,7 @@ public class FacesFunctions {
 
     final CascadeClassifier faceClassifier;
     final BufferedImage sombrero;
+    public static ObjectStore store;
 
     public FacesFunctions(RuntimeContext rtc) throws IOException {
         faceClassifier = new CascadeClassifier();
@@ -39,6 +40,7 @@ public class FacesFunctions {
 //        if (!faceClassifier.load("data/haarcascade_eye_tree_eyeglasses.xml")) {
 //            throw new RuntimeException("Failed to load eye classifier ");
 //        }
+
     }
 
 
