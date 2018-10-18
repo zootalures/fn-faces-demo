@@ -8,29 +8,40 @@
 <div style="margin: auto; width: 85%; padding: 1em; text-align: center">
     <h3>Object Storage -> Cloud Events -> Serverless: OpenWorld 2018</h3>
 </div>
-<p id="description">Upload webcam images to a public bucket in Object Storage. On every upload,
-    Object Storage sends an Cloud Event triggering a Serverless function.
-    The function applies a filter and uploads it to the output bucket
-</p>
 
+<div>
 
-<div style="display: block; margin: 0px auto">
-    <video id="player"  autoplay></video>
+    <div>
+        <p id="description">Upload webcam images to a public bucket in Object Storage. On every upload,
+            Object Storage sends an Cloud Event triggering a Serverless function.
+            The function applies a filter and uploads it to the output bucket
+        </p>
+    </div>
+
+    <div style="display: block; margin: 0px auto">
+        <video id="player"  autoplay></video>
+        <button id="capture">Capture</button>
+    </div>
+
+    <div>
+        <table>
+            <thead>
+            <tr>
+                <td>Captured Images</td>
+                <td>Processed Images</td>
+            </tr>
+            </thead>
+            <tbody id="tablebody">
+
+            </tbody>
+        </table>
+    </div>
+
 </div>
 
-<button id="capture">Capture</button>
 
-<table>
-    <thead>
-    <tr>
-        <td>Captured Images</td>
-        <td>Processed Images</td>
-    </tr>
-    </thead>
-    <tbody id="tablebody">
 
-    </tbody>
-</table>
+
 
 <style type="text/css">
     h2, h3, h4, h5, h6 {
@@ -114,7 +125,7 @@
     // Pre-Authenticated Request URL for uploading into the "facedetection-incoming" bucket.
     // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/facedetection-incoming
     const sombreroSourceBucketURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/p/svXDK-D4uP32oAq7jeewFg9oYfGimAZnWVmLIjBonA0/n/ocimiddleware/b/facedetection-incoming/o/";
-    const sombreroOutpuURLBase="https://objectstorage.us-phoenix-1.oraclecloud.com/n/ocimiddleware/b/facedetection-results/o/"
+    const sombreroOutputURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/n/ocimiddleware/b/facedetection-results/o/";
 
     // Pre-Authenticated Request URL for uploading into the "grayscale-incoming" bucket.
     // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/grayscale-incoming
@@ -134,7 +145,7 @@
     // Calculate the output file name based on the input file name.
     function outputImageURL(inputImageFileName) {
         if (urlParams.has("sombrero")) {
-            return  sombreroOutpuURLBase + inputImageFileName;
+            return sombreroOutputURLBase + inputImageFileName;
         } else {
             return `${grayscalOutputURLBase}${inputImageFileName}.png`;
         }
@@ -221,7 +232,7 @@
     }
 
     let captureImage = function () {
-// Everytime the capture button is clicked we add a row at the top of the table. On the left size
+        // Everytime the capture button is clicked we add a row at the top of the table. On the left size
         // we insert a canvas object and drop the image into the canvas. On the right side we'll wait for the
         // image to show up in the processed state and then we'll load it.
         const tableBody = document.getElementById('tablebody');
@@ -265,13 +276,14 @@
         oReq.open("PUT", putImageURL(fileId), true);
         oReq.onload = function (oEvent) {
             var outputURL = outputImageURL(fileId);
-            console.log(`Uploaded ${fileId}, polling for ${outputURL}`);
+            console.log(`Uploaded ${fileId}, polling for ${outputURL}, status=${oReq.status}`);
             pollForImage(outputURL, 30, right);
         };
 
         oReq.send(blob);
     };
-    player.addEventListener('click',()=>{
+
+    player.addEventListener('click', () => {
         captureImage();
     });
 
