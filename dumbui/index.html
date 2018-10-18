@@ -113,7 +113,8 @@
 
     // Pre-Authenticated Request URL for uploading into the "facedetection-incoming" bucket.
     // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/facedetection-incoming
-    const inputBucketURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/p/svXDK-D4uP32oAq7jeewFg9oYfGimAZnWVmLIjBonA0/n/ocimiddleware/b/facedetection-incoming/o/";
+    const sombreroSourceBucketURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/p/svXDK-D4uP32oAq7jeewFg9oYfGimAZnWVmLIjBonA0/n/ocimiddleware/b/facedetection-incoming/o/";
+    const sombreroOutpuURLBase="https://objectstorage.us-phoenix-1.oraclecloud.com/n/ocimiddleware/b/facedetection-results/o/"
 
     // Pre-Authenticated Request URL for uploading into the "grayscale-incoming" bucket.
     // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/grayscale-incoming
@@ -124,7 +125,7 @@
     // Calculate the upload URL to put a file into the source bucket.
     function putImageURL(inputImageFileName) {
         if (urlParams.has("sombrero")) {
-            return `${inputBucketURLBase}${inputImageFileName}`
+            return `${sombreroSourceBucketURLBase}${inputImageFileName}`
         } else {
             return `${grayscaleSourceBucketURLBase}${inputImageFileName}`;
         }
@@ -133,8 +134,7 @@
     // Calculate the output file name based on the input file name.
     function outputImageURL(inputImageFileName) {
         if (urlParams.has("sombrero")) {
-            // TODO(owencliffe): output URL goes here!
-            throw "Owen Cliffe needs to implement outputImageURL() for sombrero mode."
+            return  sombreroOutpuURLBase + inputImageFileName;
         } else {
             return `${grayscalOutputURLBase}${inputImageFileName}.png`;
         }
