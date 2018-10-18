@@ -15,7 +15,7 @@
 
 
 <div style="display: block; margin: 0px auto">
-    <video id="player" controls autoplay></video>
+    <video id="player"  autoplay></video>
 </div>
 
 <button id="capture">Capture</button>
@@ -44,7 +44,7 @@
     table, th {
         border-collapse: collapse;
         border: 1px solid black;
-        width: 100%;
+        width: 80%;
     }
 
     td {
@@ -220,8 +220,8 @@
         return spinner;
     }
 
-    captureButton.addEventListener('click', () => {
-        // Everytime the capture button is clicked we add a row at the top of the table. On the left size
+    let captureImage = function () {
+// Everytime the capture button is clicked we add a row at the top of the table. On the left size
         // we insert a canvas object and drop the image into the canvas. On the right side we'll wait for the
         // image to show up in the processed state and then we'll load it.
         const tableBody = document.getElementById('tablebody');
@@ -262,7 +262,7 @@
 
         var oReq = new XMLHttpRequest();
         let fileId = guid() + ".jpg";
-        oReq.open("PUT",  putImageURL(fileId), true);
+        oReq.open("PUT", putImageURL(fileId), true);
         oReq.onload = function (oEvent) {
             var outputURL = outputImageURL(fileId);
             console.log(`Uploaded ${fileId}, polling for ${outputURL}`);
@@ -270,6 +270,13 @@
         };
 
         oReq.send(blob);
+    };
+    player.addEventListener('click',()=>{
+        captureImage();
+    });
+
+    captureButton.addEventListener('click', () => {
+        captureImage();
     });
 
     // Attach the video stream to the video element and autoplay.
