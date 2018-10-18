@@ -34,6 +34,19 @@ public class FacesFunctionsTest {
       "  }\n" +
       "}";
 
+    String sampleEvent2 = "{\n" +
+      "  \"eventType\": \"com.oraclecloud.objectstorage.object.create\",\n" +
+      "  \"eventTypeVersion\": \"1.0\",\n" +
+      "  \"cloudEventsVersion\": \"0.1\",\n" +
+      "  \"source\": \"/service/objectstorage/resourceType/object\",\n" +
+      "  \"eventID\": \"dead-beef-abcd-1234\",\n" +
+      "  \"eventTime\": \"2018-04-12T23:20:50.52Z\",\n" +
+      "  \"extensions\": {\n" +
+      "    \"compartmentId\": \"ocidv1.customerfoo.compartment.abcd\"\n" +
+      "  },\n" +
+      "  \"data\": \"{\\\"tenantId\\\":\\\"ocid1.tenancy.oc1..aaaaaaaaltbr5bobenjcbaa3qsuvds6lowqokqzdjllfbwxk5ypjj2e7d23a\\\",\\\"bucketOcid\\\":\\\"ocid1.bucket.oc1.phx.aaaaaaaa7mbpdfjfi6rzz4ef2pu7hhb5vhyf4tmt73d6l4lfa3qkhmyjlljq\\\",\\\"bucketName\\\":\\\"sriks-casper-oow-demo\\\",\\\"api\\\":\\\"v2\\\",\\\"objectName\\\":\\\"image4.png\\\",\\\"objectEtag\\\":\\\"7871ED25DC03D86AE053824310AC5EA7\\\",\\\"resourceType\\\":\\\"OBJECT\\\",\\\"action\\\":\\\"CREATE\\\",\\\"creationTime\\\":\\\"2018-10-17T18:43:33.506Z\\\"}\"\n" +
+      "}\n";
+
     @Test
     public void shouldFindFacesInBasicImage() {
         testing.addSharedClass(OpenCVInit.class);
