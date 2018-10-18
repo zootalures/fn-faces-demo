@@ -165,7 +165,7 @@ public class FacesFunctions {
         List<Rect> faceRectangles = detectFaces(img);
         Graphics2D g = img.createGraphics();
         // Sort the face boxes by size smallest to largest (for Z-order)
-        Collections.sort(faceRectangles, Comparator.comparingInt(a -> a.width));
+        faceRectangles.sort(Comparator.comparingInt(a -> a.width));
         for (Rect r : faceRectangles) {
             System.err.println("Found rect " + r);
             // g.drawRect(r.x, r.y, r.width, r.height);
