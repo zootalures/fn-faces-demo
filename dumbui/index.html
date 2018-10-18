@@ -1,17 +1,192 @@
 <html>
-<body>
-<video id="player" controls autoplay></video>
+<head>
+    <title>Object Storage -> Cloud Events -> Serverless: OpenWorld 2018</title>
+</head>
+<body style="background: #fcfcfc; color: #222;">
+
+
+<div style="margin: auto; width: 85%; padding: 1em; text-align: center">
+    <h3>Object Storage -> Cloud Events -> Serverless: OpenWorld 2018</h3>
+</div>
+<p id="description">Upload webcam images to a public bucket in Object Storage. On every upload,
+    Object Storage sends an Cloud Event triggering a Serverless function.
+    The function applies a filter and uploads it to the output bucket
+</p>
+
+
+<div style="display: block; margin: 0px auto">
+    <video id="player" controls autoplay></video>
+</div>
+
 <button id="capture">Capture</button>
-<canvas id="canvas" width=320 height=240></canvas>
-<script>
+
+<table>
+    <thead>
+    <tr>
+        <td>Captured Images</td>
+        <td>Processed Images</td>
+    </tr>
+    </thead>
+    <tbody id="tablebody">
+
+    </tbody>
+</table>
+
+<style type="text/css">
+    h2, h3, h4, h5, h6 {
+        margin: 0 0 10px;
+        font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
+        font-weight: 400;
+        color: #222;
+        text-transform: none;
+    }
+
+    table, th {
+        border-collapse: collapse;
+        border: 1px solid black;
+        width: 100%;
+    }
+
+    td {
+        border: 1px solid black;
+        width: 50%;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+
+        position: relative;
+        margin: 100px auto;
+    }
+
+    .double-bounce1, .double-bounce2 {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-color: #333;
+        opacity: 0.6;
+        position: absolute;
+        top: 0;
+        left: 0;
+
+        -webkit-animation: sk-bounce 2.0s infinite ease-in-out;
+        animation: sk-bounce 2.0s infinite ease-in-out;
+    }
+
+    .double-bounce2 {
+        -webkit-animation-delay: -1.0s;
+        animation-delay: -1.0s;
+    }
+
+    @-webkit-keyframes sk-bounce {
+        0%, 100% { -webkit-transform: scale(0.0) }
+        50% { -webkit-transform: scale(1.0) }
+    }
+
+    @keyframes sk-bounce {
+        0%, 100% {
+            transform: scale(0.0);
+            -webkit-transform: scale(0.0);
+        } 50% {
+              transform: scale(1.0);
+              -webkit-transform: scale(1.0);
+          }
+    }
+</style>
+
+<script type="module">
     const player = document.getElementById('player');
-    const canvas = document.getElementById('canvas');
-    const context = canvas.getContext('2d');
     const captureButton = document.getElementById('capture');
+    const descriptionPara = document.getElementById('description');
 
     const constraints = {
         video: true,
     };
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("sombrero")) {
+        descriptionPara.innerText += " (sombrero mode).";
+    } else {
+        descriptionPara.innerText += " (gray mode).";
+    }
+
+    // Pre-Authenticated Request URL for uploading into the "facedetection-incoming" bucket.
+    // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/facedetection-incoming
+    const inputBucketURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/p/svXDK-D4uP32oAq7jeewFg9oYfGimAZnWVmLIjBonA0/n/ocimiddleware/b/facedetection-incoming/o/";
+
+    // Pre-Authenticated Request URL for uploading into the "grayscale-incoming" bucket.
+    // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/grayscale-incoming
+    const grayscaleSourceBucketURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/p/JtYoSs7RoHdLYt3Qx_gKzkjIWqUrMhVM_x1A_Lm3abs/n/ocimiddleware/b/grayscale-incoming/o/";
+    // Base URL for the output bucket in gray scale mode.
+    const grayscalOutputURLBase = "https://objectstorage.us-ashburn-1.oraclecloud.com/n/ocimiddleware/b/justin-oow/o/";
+
+    // Calculate the upload URL to put a file into the source bucket.
+    function putImageURL(inputImageFileName) {
+        if (urlParams.has("sombrero")) {
+            return `${inputBucketURLBase}${inputImageFileName}`
+        } else {
+            return `${grayscaleSourceBucketURLBase}${inputImageFileName}`;
+        }
+    }
+
+    // Calculate the output file name based on the input file name.
+    function outputImageURL(inputImageFileName) {
+        if (urlParams.has("sombrero")) {
+            // TODO(owencliffe): output URL goes here!
+            throw "Owen Cliffe needs to implement outputImageURL() for sombrero mode."
+        } else {
+            return `${grayscalOutputURLBase}${inputImageFileName}.png`;
+        }
+    }
+
+    // pollForImage() performs an HTTP get to *imageURL*. On success it clears out all
+    // children from *parentElement* and takes the content on the response and adds it
+    // as a child to the element.
+    //
+    // On 404, it will retry again in 1 second up to *retries* number of times.
+    function pollForImage(imageURL, retries, parentElement) {
+        if (retries === 0) {
+            while (parentElement.firstChild) { parentElement.removeChild(parentElement.firstChild) }
+
+            let para = document.createElement("P");
+            para.innerText = "Timed out waiting for image :(";
+            parentElement.appendChild(para);
+            return;
+        }
+
+        // Asynchronously fetch.
+        let getRequest = new XMLHttpRequest();
+        getRequest.open("GET", imageURL, true);
+        getRequest.onload = function (oEvent) {
+            switch (getRequest.status) {
+                case 200: {
+                    while (parentElement.firstChild) { parentElement.removeChild(parentElement.firstChild) }
+
+                    let image = new Image(320, 240);
+                    image.src = imageURL;
+                    parentElement.appendChild(image);
+                    break;
+                }
+                case 404: {
+                    document.defaultView.setTimeout(pollForImage, 1000, imageURL, retries - 1, parentElement);
+                    break;
+                }
+                default: {
+                    console.log(`pollForImage() received unexpected code ${getRequest.status}`);
+
+                    // On other HTTP error codes we stop the polling process immediately.
+                    while (parentElement.firstChild) { parentElement.removeChild(parentElement.firstChild) }
+
+                    let para = document.createElement("P");
+                    para.innerText = "Error :(";
+                    parentElement.appendChild(para);
+                    break;
+                }
+            }
+        };
+        getRequest.send();
+    }
 
     function guid() {
         function s4() {
@@ -22,12 +197,53 @@
         return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
     }
 
+    // makeSpinner makes a div that shows a spinner. It looks like this.
+    //
+    //  <div class="spinner">
+    //  </div class="double-bounce1">
+    //  </div class="double-bounce2">
+    //  </div>
+    //
+    // Add this as a child to your thing.
+    function makeSpinner() {
+        // Draw a spinner in the right cell.
+        let spinner = document.createElement("DIV");
+        spinner.className = "spinner";
+
+        let b1 = document.createElement("DIV");
+        b1.className = "double-bounce1";
+        let b2 = document.createElement("DIV");
+        b2.className = "double-bounce1";
+
+        spinner.appendChild(b1);
+        spinner.appendChild(b2);
+        return spinner;
+    }
+
     captureButton.addEventListener('click', () => {
+        // Everytime the capture button is clicked we add a row at the top of the table. On the left size
+        // we insert a canvas object and drop the image into the canvas. On the right side we'll wait for the
+        // image to show up in the processed state and then we'll load it.
+        const tableBody = document.getElementById('tablebody');
+
+
+        var row = tableBody.insertRow(0);
+        var left = row.insertCell();
+        var right = row.insertCell();
+
         // Draw the video frame to the canvas.
+        var canvas = document.createElement("CANVAS");
+        canvas.width = 320;
+        canvas.height = 240;
+        var context = canvas.getContext('2d');
         context.drawImage(player, 0, 0, canvas.width, canvas.height);
 
+        left.append(canvas);
+
+        // Draw a spinner in the right cell.
+        right.appendChild(makeSpinner());
+
         let dataUrl = canvas.toDataURL("image/jpeg");
-        console.log("dataUrl",dataUrl);
         let byteString = atob(dataUrl.split(',')[1]);
 
         // write the bytes of the string to an ArrayBuffer
@@ -45,10 +261,12 @@
         var blob = new Blob([ab], {type: "image/jpeg"});
 
         var oReq = new XMLHttpRequest();
-        let fileId = guid() + ".jpg"
-        oReq.open("PUT", "https://objectstorage.us-phoenix-1.oraclecloud.com/p/svXDK-D4uP32oAq7jeewFg9oYfGimAZnWVmLIjBonA0/n/ocimiddleware/b/facedetection-incoming/o/" + fileId, true);
+        let fileId = guid() + ".jpg";
+        oReq.open("PUT",  putImageURL(fileId), true);
         oReq.onload = function (oEvent) {
-            console.log("Uploaded",fileId)
+            var outputURL = outputImageURL(fileId);
+            console.log(`Uploaded ${fileId}, polling for ${outputURL}`);
+            pollForImage(outputURL, 30, right);
         };
 
         oReq.send(blob);
