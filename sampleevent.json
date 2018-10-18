@@ -11,9 +11,9 @@
   "data": {
     "tenantId": "ocid1.tenancy.oc1..aaaaaaaaltbr5bobenjcbaa3qsuvds6lowqokqzdjllfbwxk5ypjj2e7d23a",
     "bucketOcid": "ocid1.bucket.oc1.phx.aaaaaaaa7mbpdfjfi6rzz4ef2pu7hhb5vhyf4tmt73d6l4lfa3qkhmyjlljq",
-    "bucketName": "sriks-casper-oow-demo",
+    "bucketName": "facedetection-incoming",
     "api": "v2",
-    "objectName": "image2.png",
+    "objectName": "033f268c-8bd6-9f9c-d881-90dcb71ed522.jpg",
     "objectEtag": "7746B06277BD3795E053824310ACA1F6",
     "resourceType": "OBJECT",
     "action": "CREATE",

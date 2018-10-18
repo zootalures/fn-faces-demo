@@ -1,7 +1,11 @@
 schema_version: 20180708
 name: faces
-version: 0.0.6
+version: 0.0.23
 runtime: java
 cmd: com.example.fn.FacesFunctions::handleRequest
 format: http-stream
 memory: 512
+triggers:
+- name: faces
+  type: http
+  source: /faces

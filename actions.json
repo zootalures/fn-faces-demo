@@ -1,0 +1,10 @@
+{
+  "actions": [
+    {
+      "actionType": "FAAS",
+      "isEnabled": true,
+      "faasFunctionUri": "https://p2wx5aid2xa.us-phoenix-1.functions.oci.oraclecloud.com/t/faces",
+      "faasAppCompartmentId": "ocid1.compartment.oc1..aaaaaaaa7cay2qardzscbfz3xvwad775zdwa2tdio6tvydnocwffkkmvvveq"
+    }
+  ]
+}
