@@ -53,7 +53,7 @@ public class FacesFunctionsTest {
 
     @Test
     @Ignore
-    public void shouldFindFacesInBasicImage()  throws  Exception{
+    public void shouldFindFacesInBasicImage(){
         Properties p = new Properties();
         try {
             p.load(new FileInputStream("test.properties"));

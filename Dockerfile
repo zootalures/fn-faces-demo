@@ -6,7 +6,6 @@ ENV MAVEN_OPTS  -Dmaven.repo.local=/usr/share/maven/ref/repository
 # Pre-cache maven deps in a layer in the build image
 ADD pom.xml /function/pom.xml
 COPY repo /function/repo
-RUN ls -lR repo
 RUN ["mvn", "package", "dependency:copy-dependencies", "-DincludeScope=runtime", "-DskipTests=true", "-Dmdep.prependGroupId=true", "-DoutputDirectory=target"  ]
 
 
@@ -28,7 +27,6 @@ RUN ["mvn", "package"]
 FROM fnproject/fn-java-fdk:jdk9-1.0.75
 WORKDIR /function
 
-#COPY --from=opencv-build-base /build/opencv-3.2.0/build/lib/* /usr/local/lib/
 COPY --from=build-stage /usr/lib/libopencv_java320.so /function/runtime/lib
 COPY --from=build-stage /opencv/opencv_min.jar /function/app/
 COPY --from=build-stage /function/target/*.jar /function/app/

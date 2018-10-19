@@ -21,7 +21,8 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.*;
-import java.util.*;
+import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 
 public class FacesFunctions {
@@ -42,53 +43,46 @@ public class FacesFunctions {
         if (!faceClassifier.load("data/haarcascade_frontalface_alt.xml")) {
             throw new RuntimeException("Failed to load face classifier ");
         }
-
         sombrero = ImageIO.read(new File("data/sombrero.png"));
-
-//        if (!faceClassifier.load("data/haarcascade_eye_tree_eyeglasses.xml")) {
-//            throw new RuntimeException("Failed to load eye classifier ");
-//        }
-
         objectStoreClient = createObjectStoreClient(ctx);
-
-        objectStoreNamespace = reqEnv(ctx,"OBJECT_NAMESPACE");
-        outputBucketName = reqEnv(ctx,"OUTPUT_BUCKET");
-
-    }
-
-    public String reqEnv(RuntimeContext ctx,String key) {
-        return  ctx.getConfigurationByKey(key).orElseThrow(() -> new RuntimeException("Missing required config " + key));
+        objectStoreNamespace = reqEnv(ctx, "OBJECT_NAMESPACE");
+        outputBucketName = reqEnv(ctx, "OUTPUT_BUCKET");
 
     }
 
-    public ObjectStorage createObjectStoreClient(RuntimeContext ctx) {
+    private String reqEnv(RuntimeContext ctx, String key) {
+        return ctx.getConfigurationByKey(key).orElseThrow(() -> new RuntimeException("Missing required config " + key));
+
+    }
+
+    private ObjectStorage createObjectStoreClient(RuntimeContext ctx) {
         System.out.println("Inside createObjectStoreClient");
 
         ObjectStorage objStoreClient = null;
 
         try {
-            String privateKey = reqEnv(ctx,"OCI_PRIVATE_KEY");
+            String privateKey = reqEnv(ctx, "OCI_PRIVATE_KEY");
             byte[] decoded = Base64.getDecoder().decode(privateKey);
             com.google.common.base.Supplier<InputStream> privateKeyFromEnv = () -> new ByteArrayInputStream(decoded);
 
             AuthenticationDetailsProvider provider
               = SimpleAuthenticationDetailsProvider.builder()
-              .tenantId(reqEnv(ctx,"OCI_TENANCY"))
-              .userId(reqEnv(ctx,"OCI_USER"))
-              .fingerprint(reqEnv(ctx,"OCI_KEY_FINGERPRINT"))
+              .tenantId(reqEnv(ctx, "OCI_TENANCY"))
+              .userId(reqEnv(ctx, "OCI_USER"))
+              .fingerprint(reqEnv(ctx, "OCI_KEY_FINGERPRINT"))
               .privateKeySupplier(privateKeyFromEnv)
               .build();
 
             System.err.println("AuthenticationDetailsProvider setup");
 
             objStoreClient = new ObjectStorageClient(provider);
-            objStoreClient.setRegion(reqEnv(ctx,"OCI_REGION"));
+            objStoreClient.setRegion(reqEnv(ctx, "OCI_REGION"));
             //objStoreClient.setRegion(reqEnv("REGION"));
 
 
             System.out.println("ObjectStorage client setup");
         } catch (Exception ex) {
-            System.err.println("Exception in FDK "+ex.getMessage());
+            System.err.println("Exception in FDK " + ex.getMessage());
             ex.printStackTrace();
             throw new RuntimeException("failed to create client", ex);
         }
@@ -112,16 +106,14 @@ public class FacesFunctions {
                     Imgproc.equalizeHist(grayFrame, grayFrame);
 
                     int height = grayFrame.rows();
-                    double absoluteFaceSize;
-                    absoluteFaceSize = Math.round(height * 0.2f);
-                    this.faceClassifier.detectMultiScale(grayFrame, faces, 1.1, 2, 0 | Objdetect.CASCADE_SCALE_IMAGE,
+                    double absoluteFaceSize = Math.round(height * 0.2f);
+                    this.faceClassifier.detectMultiScale(grayFrame, faces, 1.1, 2, Objdetect.CASCADE_SCALE_IMAGE,
                       new Size(absoluteFaceSize, absoluteFaceSize), new Size());
                 } finally {
                     grayFrame.release();
 
                 }
-                List<Rect> f = faces.toList();
-                return f;
+                return faces.toList();
             } finally {
                 faces.release();
             }
@@ -148,32 +140,34 @@ public class FacesFunctions {
         try {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ImageIO.write(bi, "jpg", bos);
-
-            objectStoreClient.putObject(PutObjectRequest.builder().bucketName(bucketName).objectName(objectName).contentType("image/jpeg").namespaceName(objectStoreNamespace).putObjectBody(new ByteArrayInputStream(bos.toByteArray())).build());
-
-
+            objectStoreClient.putObject(PutObjectRequest.builder()
+              .bucketName(bucketName)
+              .objectName(objectName)
+              .contentType("image/jpeg")
+              .namespaceName(objectStoreNamespace)
+              .putObjectBody(new ByteArrayInputStream(bos.toByteArray()))
+              .build());
         } catch (IOException e) {
             throw new RuntimeException("Failed to load image");
         }
     }
 
 
-    public String handleRequest(@InputBinding(coercion = OCIEventBinding.class) ObjectStorageObjectEvent event) throws Exception {
+    public String handleRequest(@InputBinding(coercion = OCIEventBinding.class) ObjectStorageObjectEvent event) {
 
         BufferedImage img = loadImage(event.getBucketName(), event.getObjectName());
-
         List<Rect> faceRectangles = detectFaces(img);
-        Graphics2D g = img.createGraphics();
         // Sort the face boxes by size smallest to largest (for Z-order)
         faceRectangles.sort(Comparator.comparingInt(a -> a.width));
+
+        Graphics2D g = img.createGraphics();
         for (Rect r : faceRectangles) {
             System.err.println("Found rect " + r);
-            // g.drawRect(r.x, r.y, r.width, r.height);
             double sombreroRatio = (double) sombrero.getWidth() / (double) sombrero.getHeight();
-            double hatWidth = r.width * 2;
+            double hatWidth = r.width * 2.3;
             double hatHeight = hatWidth / sombreroRatio;
 
-            g.drawImage(sombrero, (int) ((double) r.x - ((hatWidth - r.width) / 2.0)), r.y - (int) hatHeight + (int) (r.height * .2), (int) hatWidth, (int) hatHeight, null);
+            g.drawImage(sombrero, (int) ((double) r.x - ((hatWidth - r.width) / 2.0)), r.y - (int) hatHeight + (int) (r.height * .3), (int) hatWidth, (int) hatHeight, null);
         }
         g.dispose();
         writeImage(img, outputBucketName, event.getObjectName());
