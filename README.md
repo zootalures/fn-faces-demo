@@ -21,7 +21,8 @@ I suggest setting up an OCI account with only read/write access to the appropria
 
 Create the function: 
 ```
-fn create app faces-demo --annotation 'oracle.com/oci/subnetIds=["ocid1.subnet.oc1.phx.aaaaaaaabvua55yccnh4lxoqn7xkyzgk6wlqwusfnwm4tdb3nmkwknlzdhhq","ocid1.subnet.oc1.phx.aaaaaaaab3njfvicu7jbscr5hjkjudlayxt4crkd4c7cesj77tzagwv527ja","ocid1.subnet.oc1.phx.aaaaaaaap36kfznrzylxxqqd6f2mlh23rbok5envi7sofypabgwdyskqz5pa"]'fn config app faces-demo OCI_PRIVATE_KEY $(cat /Users/OCliffe/.oci/oci_faces_key.pem |base64)  
+fn create app faces-demo --annotation 'oracle.com/oci/subnetIds=["ocid1.subnet.oc1.phx.aaaaaaaabvua55yccnh4lxoqn7xkyzgk6wlqwusfnwm4tdb3nmkwknlzdhhq","ocid1.subnet.oc1.phx.aaaaaaaab3njfvicu7jbscr5hjkjudlayxt4crkd4c7cesj77tzagwv527ja","ocid1.subnet.oc1.phx.aaaaaaaap36kfznrzylxxqqd6f2mlh23rbok5envi7sofypabgwdyskqz5pa"]'
+fn config app faces-demo OCI_PRIVATE_KEY $(cat /Users/OCliffe/.oci/oci_faces_key.pem |base64)  
 fn config app faces-demo OCI_KEY_FINGERPRINT a5:28:34:aa:02:a1:c1:2b:5a:d8:f5:c9:cc:9f:ca:35
 fn config app faces-demo OCI_TENANCY ocid1.tenancy.oc1..aaaaaaaaltbr5bobenjcbaa3qsuvds6lowqokqzdjllfbwxk5ypjj2e7d23a
 fn config app faces-demo OCI_USER ocid1.user.oc1..aaaaaaaakauoquug7zbv6llqz5ga3ewmzsxmy6t5r3xc7txfukub7twy5asq
@@ -32,7 +33,7 @@ fn config app faces-demo OUTPUT_BUCKET "facedetection-results"
 
 Deploy the function 
 ```
-fn deploy -v   --app faces-demo 
+fn -v deploy --app faces-demo 
 ```
 
 Set up the events rules: 
@@ -42,7 +43,7 @@ oci --profile ocimiddleware cloud-events rule create --display-name detect-faces
 
 open the UI: 
 ```
- open  dumbui/index.html
+ open dumbui/index.html
 ```
 Update the browser url to add `?sombrero=true` to the end 
 
