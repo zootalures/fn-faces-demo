@@ -1,36 +1,52 @@
 <html>
 <head>
-    <title>Object Storage -> Cloud Events -> Serverless: OpenWorld 2018</title>
+    <title>OpenWorld 2018: Object Storage -> Cloud Events -> Serverless</title>
 </head>
 <body style="background: #fcfcfc; color: #222;">
 
 
 <div style="margin: auto; width: 85%; padding: 1em; text-align: center">
-    <h3>Object Storage -> Cloud Events -> Serverless: OpenWorld 2018</h3>
-</div>
-<p id="description">Upload webcam images to a public bucket in Object Storage. On every upload,
-    Object Storage sends an Cloud Event triggering a Serverless function.
-    The function applies a filter and uploads it to the output bucket
-</p>
-
-
-<div style="display: block; margin: 0px auto">
-    <video id="player"  autoplay></video>
+    <h3>OpenWorld 2018: Object Storage -> Cloud Events -> Serverless</h3>
 </div>
 
-<button id="capture">Capture</button>
+<div style="display: flex; flex-direction: column">
 
-<table>
-    <thead>
-    <tr>
-        <td>Captured Images</td>
-        <td>Processed Images</td>
-    </tr>
-    </thead>
-    <tbody id="tablebody">
+    <div style="display: flex; flex-direction: row">
 
-    </tbody>
-</table>
+        <div style="margin: 1em; flex-grow: 2; flex-basis: 70%">
+            <video id="player" style="margin: 0.25em; width: 100%;" playsinline autoplay></video>
+            <button id="capture" style="margin: 0.25em; width: 100%; height: 2em; font-size: 1em; alignment: center">Capture</button>
+        </div>
+
+        <div style="margin: 1em; flex-grow: 1">
+
+            <p><strong>Instructions:</strong> <em>Click the Webcam video or the "Capture" button to take a picture!</em></p>
+
+            <p>This demo shows integration between the <strong>Object Storage</strong>, <strong>Cloud Events</strong>,
+                and <strong>Serverless Functions</strong> services. Pictures will be uploaded to Object Storage.
+                On every upload, an Cloud Event is generated. The event triggers a Serverless Function.</p>
+
+            <p id="description">The function applies a filter and uploads it to the output bucket</p>
+        </div>
+    </div>
+
+
+    <div>
+        <table>
+            <thead>
+            <tr style="padding: 5px">
+                <td style="font-size: 1.2em; text-align: center">Captured Images</td>
+                <td style="font-size: 1.2em; text-align: center">Processed Images</td>
+            </tr>
+            </thead>
+            <tbody id="tablebody">
+
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
 
 <style type="text/css">
     h2, h3, h4, h5, h6 {
@@ -44,12 +60,25 @@
     table, th {
         border-collapse: collapse;
         border: 1px solid black;
-        width: 80%;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     td {
         border: 1px solid black;
         width: 50%;
+        align: center;
+    }
+
+    .smallimage {
+        width: 90%;
+        height: auto;
+        display: block;
+        margin: 5px;
+        margin-left: auto;
+        margin-right: auto;
+        border: #B9CEEA solid 5px;
     }
 
     .spinner {
@@ -98,46 +127,24 @@
 <script type="module">
     const player = document.getElementById('player');
     const captureButton = document.getElementById('capture');
-    const descriptionPara = document.getElementById('description');
-
+    const urlParams = new URLSearchParams(window.location.search);
     const constraints = {
         video: true,
     };
 
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has("sombrero")) {
-        descriptionPara.innerText += " (sombrero mode).";
-    } else {
-        descriptionPara.innerText += " (gray mode).";
-    }
-
     // Pre-Authenticated Request URL for uploading into the "facedetection-incoming" bucket.
     // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/facedetection-incoming
     const sombreroSourceBucketURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/p/svXDK-D4uP32oAq7jeewFg9oYfGimAZnWVmLIjBonA0/n/ocimiddleware/b/facedetection-incoming/o/";
-    const sombreroOutpuURLBase="https://objectstorage.us-phoenix-1.oraclecloud.com/n/ocimiddleware/b/facedetection-results/o/"
-
-    // Pre-Authenticated Request URL for uploading into the "grayscale-incoming" bucket.
-    // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/grayscale-incoming
-    const grayscaleSourceBucketURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/p/JtYoSs7RoHdLYt3Qx_gKzkjIWqUrMhVM_x1A_Lm3abs/n/ocimiddleware/b/grayscale-incoming/o/";
-    // Base URL for the output bucket in gray scale mode.
-    const grayscalOutputURLBase = "https://objectstorage.us-ashburn-1.oraclecloud.com/n/ocimiddleware/b/justin-oow/o/";
+    const sombreroOutputURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/n/ocimiddleware/b/facedetection-results/o/";
 
     // Calculate the upload URL to put a file into the source bucket.
     function putImageURL(inputImageFileName) {
-        if (urlParams.has("sombrero")) {
-            return `${sombreroSourceBucketURLBase}${inputImageFileName}`
-        } else {
-            return `${grayscaleSourceBucketURLBase}${inputImageFileName}`;
-        }
+        return `${sombreroSourceBucketURLBase}${inputImageFileName}`
     }
 
     // Calculate the output file name based on the input file name.
     function outputImageURL(inputImageFileName) {
-        if (urlParams.has("sombrero")) {
-            return  sombreroOutpuURLBase + inputImageFileName;
-        } else {
-            return `${grayscalOutputURLBase}${inputImageFileName}.png`;
-        }
+        return sombreroOutputURLBase + inputImageFileName;
     }
 
     // pollForImage() performs an HTTP get to *imageURL*. On success it clears out all
@@ -145,7 +152,8 @@
     // as a child to the element.
     //
     // On 404, it will retry again in 1 second up to *retries* number of times.
-    function pollForImage(imageURL, retries, parentElement) {
+    function pollForImage(imageURL, retries, widthHeightParent) {
+        let parentElement = widthHeightParent["parent"];
         if (retries === 0) {
             while (parentElement.firstChild) { parentElement.removeChild(parentElement.firstChild) }
 
@@ -163,13 +171,14 @@
                 case 200: {
                     while (parentElement.firstChild) { parentElement.removeChild(parentElement.firstChild) }
 
-                    let image = new Image(320, 240);
+                    let image = new Image(widthHeightParent["width"], widthHeightParent["heigth"]);
                     image.src = imageURL;
+                    image.className = "smallimage";
                     parentElement.appendChild(image);
                     break;
                 }
                 case 404: {
-                    document.defaultView.setTimeout(pollForImage, 1000, imageURL, retries - 1, parentElement);
+                    document.defaultView.setTimeout(pollForImage, 1000, imageURL, retries - 1, widthHeightParent);
                     break;
                 }
                 default: {
@@ -221,24 +230,58 @@
     }
 
     let captureImage = function () {
-// Everytime the capture button is clicked we add a row at the top of the table. On the left size
+        player.removeAttribute("controls");
+
+        // Every time the capture button is clicked we add a row at the top of the table. On the left size
         // we insert a canvas object and drop the image into the canvas. On the right side we'll wait for the
         // image to show up in the processed state and then we'll load it.
         const tableBody = document.getElementById('tablebody');
 
+        // Insert a row
+        let row = tableBody.insertRow(0);
+        let left = row.insertCell();
+        let right = row.insertCell();
 
-        var row = tableBody.insertRow(0);
-        var left = row.insertCell();
-        var right = row.insertCell();
+
+        // Get the dimensions of the video track. The video stream we get will
+        // probably be more than 320 pixels wide or 240 pixels tall. Larger
+        // image sizes increase the amount of time spent doing image analysis.
+        // We are going to cap the dimensions of the input image to at most
+        // 320 wide and at most 240 tall, while also respecting the original
+        // aspect ratio (width / height).
+        let tracks = player.srcObject.getVideoTracks();
+        let videoSettings = tracks[0].getSettings();
+        let heightRatio = 240 / videoSettings.height;
+        let widthRatio = 320 / videoSettings.width;
+
+
+
+        // Choose the lesser of the two ratios to use as scaling factor.
+        let lesserRatio = heightRatio;
+        if (heightRatio > widthRatio) {
+            lesserRatio = widthRatio;
+        }
+
+        let dimensionsAndParent = {
+            "width": lesserRatio * videoSettings.width,
+            "height": lesserRatio * videoSettings.height,
+            "parent": right
+        };
 
         // Draw the video frame to the canvas.
-        var canvas = document.createElement("CANVAS");
-        canvas.width = 320;
-        canvas.height = 240;
-        var context = canvas.getContext('2d');
+        let canvas = document.createElement("CANVAS");
+        canvas.width = dimensionsAndParent.width;
+        canvas.height = dimensionsAndParent.height;
+        canvas.className = "smallimage";
+        let context = canvas.getContext('2d');
         context.drawImage(player, 0, 0, canvas.width, canvas.height);
 
         left.append(canvas);
+        if (urlParams.has("debug")) {
+            let debugpar = document.createElement("P");
+            debugpar.innerText = `aspect ratio is ${videoSettings.aspectRatio}, videoSettings.width=${videoSettings.width}, videoSettings.height=${videoSettings.height} width=${dimensionsAndParent.width}, height=${dimensionsAndParent.height}`;
+            left.appendChild(debugpar)
+        }
 
         // Draw a spinner in the right cell.
         right.appendChild(makeSpinner());
@@ -265,13 +308,14 @@
         oReq.open("PUT", putImageURL(fileId), true);
         oReq.onload = function (oEvent) {
             var outputURL = outputImageURL(fileId);
-            console.log(`Uploaded ${fileId}, polling for ${outputURL}`);
-            pollForImage(outputURL, 30, right);
+            console.log(`Uploaded ${fileId}, polling for ${outputURL}, status=${oReq.status}`);
+            pollForImage(outputURL, 60, dimensionsAndParent);
         };
 
         oReq.send(blob);
     };
-    player.addEventListener('click',()=>{
+
+    player.addEventListener('click', () => {
         captureImage();
     });
 
@@ -283,6 +327,7 @@
     navigator.mediaDevices.getUserMedia(constraints)
         .then((stream) => {
             player.srcObject = stream;
+            player.play();
         });
 </script>
 
