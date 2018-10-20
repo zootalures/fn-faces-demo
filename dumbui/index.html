@@ -13,7 +13,7 @@
 
     <div style="display: flex; flex-direction: row">
 
-        <div style="margin: 1em; flex-grow: 2; flex-basis: 70%">
+        <div id="playerParent" style="margin: 1em; flex-grow: 2; flex-basis: 70%">
             <video id="player" style="margin: 0.25em; width: 100%;" playsinline autoplay></video>
             <button id="capture" style="margin: 0.25em; width: 100%; height: 2em; font-size: 1em; alignment: center">Capture</button>
         </div>
@@ -126,6 +126,7 @@
 
 <script type="module">
     const player = document.getElementById('player');
+    const playerParent = document.getElementById('playerParent');
     const captureButton = document.getElementById('capture');
     const urlParams = new URLSearchParams(window.location.search);
     const constraints = {
@@ -328,6 +329,14 @@
         .then((stream) => {
             player.srcObject = stream;
             player.play();
+        })
+        .catch( (err) => {
+            while (playerParent.firstChild) { playerParent.removeChild(playerParent.firstChild) }
+
+            let para = document.createElement("P");
+            para.innerText = "Video Camera not available. Try enabling camera for the browser and restarting the page.";
+            para.style.textAlign = "center";
+            playerParent.appendChild(para);
         });
 </script>
 

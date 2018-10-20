@@ -52,8 +52,7 @@ public class FacesFunctionsTest {
 
 
     @Test
-    @Ignore
-    public void shouldFindFacesInBasicImage(){
+    public void shouldFindFacesInBasicImage() {
         Properties p = new Properties();
         try {
             p.load(new FileInputStream("test.properties"));
