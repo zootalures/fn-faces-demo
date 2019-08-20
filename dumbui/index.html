@@ -1,0 +1,344 @@
+<html>
+<head>
+    <title>KubeCon 2018: Object Storage -> Cloud Events -> Serverless</title>
+</head>
+<body style="background: #fcfcfc; color: #222;">
+
+
+<div style="margin: auto; width: 85%; padding: 1em; text-align: center">
+    <h3>KubeCon 2018: Object Storage -> Cloud Events -> Serverless</h3>
+</div>
+
+<div style="display: flex; flex-direction: column">
+
+    <div style="display: flex; flex-direction: row">
+
+        <div id="playerParent" style="margin: 1em; flex-grow: 2; flex-basis: 70%">
+            <video id="player" style="margin: 0.25em; width: 100%;" playsinline autoplay></video>
+            <button id="capture" style="margin: 0.25em; width: 100%; height: 2em; font-size: 1em; alignment: center">Capture</button>
+        </div>
+
+        <div style="margin: 1em; flex-grow: 1">
+
+            <p><strong>Instructions:</strong> <em>Click the Webcam video or the "Capture" button to take a picture!</em></p>
+
+            <p>This demo shows integration between the <strong>Object Storage</strong>, <strong>Cloud Events</strong>,
+                and <strong>Serverless Functions</strong> services. Pictures will be uploaded to Object Storage.
+                On every upload, an Cloud Event is generated. The event triggers a Serverless Function.</p>
+
+            <p id="description">The function applies a filter and uploads it to the output bucket</p>
+        </div>
+    </div>
+
+
+    <div>
+        <table>
+            <thead>
+            <tr style="padding: 5px">
+                <td style="font-size: 1.2em; text-align: center">Captured Images</td>
+                <td style="font-size: 1.2em; text-align: center">Processed Images</td>
+            </tr>
+            </thead>
+            <tbody id="tablebody">
+
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+
+<style type="text/css">
+    h2, h3, h4, h5, h6 {
+        margin: 0 0 10px;
+        font-family: Helvetica Neue,Helvetica,Arial,sans-serif;
+        font-weight: 400;
+        color: #222;
+        text-transform: none;
+    }
+
+    table, th {
+        border-collapse: collapse;
+        border: 1px solid black;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    td {
+        border: 1px solid black;
+        width: 50%;
+        align: center;
+    }
+
+    .smallimage {
+        width: 90%;
+        height: auto;
+        display: block;
+        margin: 5px;
+        margin-left: auto;
+        margin-right: auto;
+        border: #B9CEEA solid 5px;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+
+        position: relative;
+        margin: 100px auto;
+    }
+
+    .double-bounce1, .double-bounce2 {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-color: #333;
+        opacity: 0.6;
+        position: absolute;
+        top: 0;
+        left: 0;
+
+        -webkit-animation: sk-bounce 2.0s infinite ease-in-out;
+        animation: sk-bounce 2.0s infinite ease-in-out;
+    }
+
+    .double-bounce2 {
+        -webkit-animation-delay: -1.0s;
+        animation-delay: -1.0s;
+    }
+
+    @-webkit-keyframes sk-bounce {
+        0%, 100% { -webkit-transform: scale(0.0) }
+        50% { -webkit-transform: scale(1.0) }
+    }
+
+    @keyframes sk-bounce {
+        0%, 100% {
+            transform: scale(0.0);
+            -webkit-transform: scale(0.0);
+        } 50% {
+              transform: scale(1.0);
+              -webkit-transform: scale(1.0);
+          }
+    }
+</style>
+
+<script type="module">
+    const player = document.getElementById('player');
+    const playerParent = document.getElementById('playerParent');
+    const captureButton = document.getElementById('capture');
+    const urlParams = new URLSearchParams(window.location.search);
+    const constraints = {
+        video: true,
+    };
+
+    // Pre-Authenticated Request URL for uploading into the "facedetection-incoming" bucket.
+    // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/facedetection-incoming
+    const sombreroSourceBucketURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/p/svXDK-D4uP32oAq7jeewFg9oYfGimAZnWVmLIjBonA0/n/ocimiddleware/b/facedetection-incoming/o/";
+    const sombreroOutputURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/n/ocimiddleware/b/facedetection-results/o/";
+
+    // Calculate the upload URL to put a file into the source bucket.
+    function putImageURL(inputImageFileName) {
+        return `${sombreroSourceBucketURLBase}${inputImageFileName}`
+    }
+
+    // Calculate the output file name based on the input file name.
+    function outputImageURL(inputImageFileName) {
+        return sombreroOutputURLBase + inputImageFileName;
+    }
+
+    // pollForImage() performs an HTTP get to *imageURL*. On success it clears out all
+    // children from *parentElement* and takes the content on the response and adds it
+    // as a child to the element.
+    //
+    // On 404, it will retry again in 1 second up to *retries* number of times.
+    function pollForImage(imageURL, retries, widthHeightParent) {
+        let parentElement = widthHeightParent["parent"];
+        if (retries === 0) {
+            while (parentElement.firstChild) { parentElement.removeChild(parentElement.firstChild) }
+
+            let para = document.createElement("P");
+            para.innerText = "Timed out waiting for image :(";
+            parentElement.appendChild(para);
+            return;
+        }
+
+        // Asynchronously fetch.
+        let getRequest = new XMLHttpRequest();
+        getRequest.open("GET", imageURL, true);
+        getRequest.onload = function (oEvent) {
+            switch (getRequest.status) {
+                case 200: {
+                    while (parentElement.firstChild) { parentElement.removeChild(parentElement.firstChild) }
+
+                    let image = new Image(widthHeightParent["width"], widthHeightParent["heigth"]);
+                    image.src = imageURL;
+                    image.className = "smallimage";
+                    parentElement.appendChild(image);
+                    break;
+                }
+                case 404: {
+                    document.defaultView.setTimeout(pollForImage, 1000, imageURL, retries - 1, widthHeightParent);
+                    break;
+                }
+                default: {
+                    console.log(`pollForImage() received unexpected code ${getRequest.status}`);
+
+                    // On other HTTP error codes we stop the polling process immediately.
+                    while (parentElement.firstChild) { parentElement.removeChild(parentElement.firstChild) }
+
+                    let para = document.createElement("P");
+                    para.innerText = "Error :(";
+                    parentElement.appendChild(para);
+                    break;
+                }
+            }
+        };
+        getRequest.send();
+    }
+
+    function guid() {
+        function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000)
+                .toString(16)
+                .substring(1);
+        }
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+    }
+
+    // makeSpinner makes a div that shows a spinner. It looks like this.
+    //
+    //  <div class="spinner">
+    //  </div class="double-bounce1">
+    //  </div class="double-bounce2">
+    //  </div>
+    //
+    // Add this as a child to your thing.
+    function makeSpinner() {
+        // Draw a spinner in the right cell.
+        let spinner = document.createElement("DIV");
+        spinner.className = "spinner";
+
+        let b1 = document.createElement("DIV");
+        b1.className = "double-bounce1";
+        let b2 = document.createElement("DIV");
+        b2.className = "double-bounce1";
+
+        spinner.appendChild(b1);
+        spinner.appendChild(b2);
+        return spinner;
+    }
+
+    let captureImage = function () {
+        player.removeAttribute("controls");
+
+        // Every time the capture button is clicked we add a row at the top of the table. On the left size
+        // we insert a canvas object and drop the image into the canvas. On the right side we'll wait for the
+        // image to show up in the processed state and then we'll load it.
+        const tableBody = document.getElementById('tablebody');
+
+        // Insert a row
+        let row = tableBody.insertRow(0);
+        let left = row.insertCell();
+        let right = row.insertCell();
+
+
+        // Get the dimensions of the video track. The video stream we get will
+        // probably be more than 320 pixels wide or 240 pixels tall. Larger
+        // image sizes increase the amount of time spent doing image analysis.
+        // We are going to cap the dimensions of the input image to at most
+        // 320 wide and at most 240 tall, while also respecting the original
+        // aspect ratio (width / height).
+        let tracks = player.srcObject.getVideoTracks();
+        let videoSettings = tracks[0].getSettings();
+        let heightRatio = 240 / videoSettings.height;
+        let widthRatio = 320 / videoSettings.width;
+
+
+
+        // Choose the lesser of the two ratios to use as scaling factor.
+        let lesserRatio = heightRatio;
+        if (heightRatio > widthRatio) {
+            lesserRatio = widthRatio;
+        }
+
+        let dimensionsAndParent = {
+            "width": lesserRatio * videoSettings.width,
+            "height": lesserRatio * videoSettings.height,
+            "parent": right
+        };
+
+        // Draw the video frame to the canvas.
+        let canvas = document.createElement("CANVAS");
+        canvas.width = dimensionsAndParent.width;
+        canvas.height = dimensionsAndParent.height;
+        canvas.className = "smallimage";
+        let context = canvas.getContext('2d');
+        context.drawImage(player, 0, 0, canvas.width, canvas.height);
+
+        left.append(canvas);
+        if (urlParams.has("debug")) {
+            let debugpar = document.createElement("P");
+            debugpar.innerText = `aspect ratio is ${videoSettings.aspectRatio}, videoSettings.width=${videoSettings.width}, videoSettings.height=${videoSettings.height} width=${dimensionsAndParent.width}, height=${dimensionsAndParent.height}`;
+            left.appendChild(debugpar)
+        }
+
+        // Draw a spinner in the right cell.
+        right.appendChild(makeSpinner());
+
+        let dataUrl = canvas.toDataURL("image/jpeg");
+        let byteString = atob(dataUrl.split(',')[1]);
+
+        // write the bytes of the string to an ArrayBuffer
+        var ab = new ArrayBuffer(byteString.length);
+
+        // create a view into the buffer
+        var ia = new Uint8Array(ab);
+
+        // set the bytes of the buffer to the correct values
+        for (var i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+
+        // write the ArrayBuffer to a blob, and you're done
+        var blob = new Blob([ab], {type: "image/jpeg"});
+
+        var oReq = new XMLHttpRequest();
+        let fileId = guid() + ".jpg";
+        oReq.open("PUT", putImageURL(fileId), true);
+        oReq.onload = function (oEvent) {
+            var outputURL = outputImageURL(fileId);
+            console.log(`Uploaded ${fileId}, polling for ${outputURL}, status=${oReq.status}`);
+            pollForImage(outputURL, 100, dimensionsAndParent);
+        };
+
+        oReq.send(blob);
+    };
+
+    player.addEventListener('click', () => {
+        captureImage();
+    });
+
+    captureButton.addEventListener('click', () => {
+        captureImage();
+    });
+
+    // Attach the video stream to the video element and autoplay.
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then((stream) => {
+            player.srcObject = stream;
+            player.play();
+        })
+        .catch( (err) => {
+            while (playerParent.firstChild) { playerParent.removeChild(playerParent.firstChild) }
+
+            let para = document.createElement("P");
+            para.innerText = "Video Camera not available. Try enabling camera for the browser and restarting the page.";
+            para.style.textAlign = "center";
+            playerParent.appendChild(para);
+        });
+</script>
+
+</body>
+</html>

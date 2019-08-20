@@ -1,0 +1,22 @@
+{
+  "eventType": "com.oraclecloud.objectstorage.object.create",
+  "eventTypeVersion": "1.0",
+  "cloudEventsVersion": "0.1",
+  "source": "/service/objectstorage/resourceType/object",
+  "eventID": "dead-beef-abcd-1234",
+  "eventTime": "2018-04-12T23:20:50.52Z",
+  "extensions": {
+    "compartmentId": "ocidv1.customerfoo.compartment.abcd"
+  },
+  "data": {
+    "tenantId": "ocid1.tenancy.oc1..aaaaaaaaltbr5bobenjcbaa3qsuvds6lowqokqzdjllfbwxk5ypjj2e7d23a",
+    "bucketOcid": "ocid1.bucket.oc1.phx.aaaaaaaa7mbpdfjfi6rzz4ef2pu7hhb5vhyf4tmt73d6l4lfa3qkhmyjlljq",
+    "bucketName": "facedetection-incoming",
+    "api": "v2",
+    "objectName": "033f268c-8bd6-9f9c-d881-90dcb71ed522.jpg",
+    "objectEtag": "7746B06277BD3795E053824310ACA1F6",
+    "resourceType": "OBJECT",
+    "action": "CREATE",
+    "creationTime": "2018-10-02T21:58:30.070Z"
+  }
+}
