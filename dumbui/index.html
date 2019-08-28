@@ -1,12 +1,12 @@
 <html>
 <head>
-    <title>KubeCon 2018: Object Storage -> Cloud Events -> Serverless</title>
+    <title>Object Storage -> Cloud Events -> Serverless</title>
 </head>
 <body style="background: #fcfcfc; color: #222;">
 
 
 <div style="margin: auto; width: 85%; padding: 1em; text-align: center">
-    <h3>KubeCon 2018: Object Storage -> Cloud Events -> Serverless</h3>
+    <h3>Object Storage -> Cloud Events -> Serverless</h3>
 </div>
 
 <div style="display: flex; flex-direction: column">
@@ -24,7 +24,7 @@
 
             <p>This demo shows integration between the <strong>Object Storage</strong>, <strong>Cloud Events</strong>,
                 and <strong>Serverless Functions</strong> services. Pictures will be uploaded to Object Storage.
-                On every upload, an Cloud Event is generated. The event triggers a Serverless Function.</p>
+                On every upload, a Cloud Event is generated. The event triggers a Serverless Function.</p>
 
             <p id="description">The function applies a filter and uploads it to the output bucket</p>
         </div>
@@ -134,9 +134,11 @@
     };
 
     // Pre-Authenticated Request URL for uploading into the "facedetection-incoming" bucket.
-    // https://console.us-phoenix-1.oraclecloud.com/a/storage/objects/ocimiddleware/facedetection-incoming
-    const sombreroSourceBucketURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/p/svXDK-D4uP32oAq7jeewFg9oYfGimAZnWVmLIjBonA0/n/ocimiddleware/b/facedetection-incoming/o/";
-    const sombreroOutputURLBase = "https://objectstorage.us-phoenix-1.oraclecloud.com/n/ocimiddleware/b/facedetection-results/o/";
+    // Please follow the instructions on how to create these URLs
+
+    const sombreroSourceBucketURLBase = "Pre-Authenticated Request URL";
+    const sombreroOutputURLBase = "Public URL";
+
 
     // Calculate the upload URL to put a file into the source bucket.
     function putImageURL(inputImageFileName) {

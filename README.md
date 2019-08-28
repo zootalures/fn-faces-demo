@@ -16,7 +16,7 @@ Key things to highlight:
 * As a developer you get to focus on the code, the body of the function is plain old java, it's easy to read and code and can take advantage of the whole java stack , but we also don't get in your way when you want to do more powerful things -  in this case we use an  using a JNI library (openCV) which we re-bundle and install as part of the function build
 * The Build is done using a plain old [Dockerfile](Dockerfile)
 * Events are sent to the function using the  open [cloud-events](https://cloudevents.io/) protocol in JSON this makes handling events easy and standards-based as well as enabling inter-cloud communication for customers applications.
-*  When the function is running it's connected to a customer-owned private network  - in this case we only use OCI resources but you could also attach to private services you run on your VCN like databases or rest APIs.
+* When the function is running it's connected to a customer-owned private network  - in this case we only use OCI resources but you could also attach to private services you run on your VCN like databases or rest APIs.
 
 
 ## Demo notes
@@ -26,31 +26,64 @@ Images are uploaded from the cloud and may be publicly accessible - they use ran
 
 Example walk through - this assumes you already have an account with access to functions and events,
 
-I suggest setting up an OCI account with only read/write access to the appropriate buckets (the account with private key /Users/OCliffe/.oci/oci_faces_key.pem )
+It is recommended to set up an OCI account with only read/write access to the appropriate buckets.
+
+The input bucket "facedetection-incoming", output bucket "facedetection-results" and "ui" bucket must also have already been created in your compartment. 
 
 Create the function:
 ```
-fn create app faces-demo --annotation 'oracle.com/oci/subnetIds=["ocid1.subnet.oc1.phx.aaaaaaaabvua55yccnh4lxoqn7xkyzgk6wlqwusfnwm4tdb3nmkwknlzdhhq","ocid1.subnet.oc1.phx.aaaaaaaab3njfvicu7jbscr5hjkjudlayxt4crkd4c7cesj77tzagwv527ja","ocid1.subnet.oc1.phx.aaaaaaaap36kfznrzylxxqqd6f2mlh23rbok5envi7sofypabgwdyskqz5pa"]'
-fn config app faces-demo OCI_PRIVATE_KEY $(cat /Users/OCliffe/.oci/oci_faces_key.pem |base64)
-fn config app faces-demo OCI_KEY_FINGERPRINT a5:28:34:aa:02:a1:c1:2b:5a:d8:f5:c9:cc:9f:ca:35
-fn config app faces-demo OCI_TENANCY ocid1.tenancy.oc1..aaaaaaaaltbr5bobenjcbaa3qsuvds6lowqokqzdjllfbwxk5ypjj2e7d23a
-fn config app faces-demo OCI_USER ocid1.user.oc1..aaaaaaaakauoquug7zbv6llqz5ga3ewmzsxmy6t5r3xc7txfukub7twy5asq
+fn create app faces-demo --annotation 'oracle.com/oci/subnetIds=["ocid1.subnet.oc1.phx.aaaaaaa...","ocid1.subnet.oc1.phx.aaaaaaaab...","ocid1.subnet.oc1.phx.aaaaaaaap..."]'
 fn config app faces-demo OCI_REGION us-phoenix-1
-fn config app faces-demo OBJECT_NAMESPACE "ocimiddleware"
 fn config app faces-demo OUTPUT_BUCKET "facedetection-results"
 ```
 
-Deploy the function
+Deploy the function:
 ```
 fn -v deploy --app faces-demo
 ```
+These next few steps can be done through the OCI console.
 
 Set up the events rules:
+![EVENTS RULE 1](events.rule.1.png)
+
+![EVENTS RULE 2](events.rule.2.png)
+
+Create the dynamic group: 
+![DYNAMIC GROUP](dynamic.group.png)
+
+Dynamic Group name: 
 ```
-oci --profile ocimiddleware cloud-events rule create --display-name detect-faces-in-uplaods --is-enabled true --condition '{"eventType":"oci.objectstorage.object.create"}' --compartment-id ocid1.compartment.oc1..aaaaaaaa7cay2qardzscbfz3xvwad775zdwa2tdio6tvydnocwffkkmvvveq --actions file://actions.json --endpoint https://cloudevents-stage.us-phoenix-1.oraclecloud.com/20181201
+FnFacesDemo
+```
+The matching rule used:
+```
+ALL {resource.type = 'fnfunc', resource.compartment.id = 'ocid1.compartment.oc1..aaa...vveq'}
 ```
 
-open the UI:
+Create the policies:
+![POLICIES](policies.png)
+
+Policy statements used: 
+```
+Allow dynamic-group FnFacesDemo to manage objects in compartment compartment-name
+
+Allow service cloudEvents to use functions-family in compartment compartment-name
+```
+
+Create a Pre-Authenticated Request URL for the facedetection-incoming bucket:
+![PAR](par.png)
+
+And edit the visibility of output bucket facedetection-results to public.
+
+Within index.html set `const sombreroSourceBucketURLBase ` to the Pre-Authenticated Request URL, and, `const sombreroOutputURLBase` to the public address.
+The public address will be in the form of: 
+```
+
+"https://objectstorage.us-phoenix-1.oraclecloud.com/n/<namespace>/b/<bucket-name>/o/";
+```
+
+
+Open the UI:
 ```
  open dumbui/index.html
 ```
@@ -70,13 +103,12 @@ We also have a short URL [http://bit.ly/openworld-cloud-events-function](http://
 ![QR Code For Demo URL](qrcode.for.demo.url.png)
 
 
-The bucket is in the "ocimiddleware" tenancy, region PHX, compartment
-"EventsDevTeam", bucket = "ui".
+To push the demo page to the "ui" bucket:
+```
 
-To push the demo page:
-
-    oci os object put -ns ocimiddleware -bn ui --name index.html --file dumbui/index.html --content-type "text/html" --force --profile $PROFILE
-
+oci os object put -ns tenant-name -bn ui --name index.html --file dumbui/index.html --content-type "text/html" --force --profile $PROFILE
+```
+Or you can directly upload the index.html file to the bucket using the OCI console.
 ## Stolen Resources
 
 Spinner was #2 from this site, http://tobiasahlin.com/spinkit/

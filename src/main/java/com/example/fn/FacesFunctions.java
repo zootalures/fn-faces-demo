@@ -4,8 +4,7 @@ import com.example.fn.cloudevents.OCIEventBinding;
 import com.example.fn.cloudevents.ObjectStorageObjectEvent;
 import com.fnproject.fn.api.InputBinding;
 import com.fnproject.fn.api.RuntimeContext;
-import com.oracle.bmc.auth.AuthenticationDetailsProvider;
-import com.oracle.bmc.auth.SimpleAuthenticationDetailsProvider;
+import com.oracle.bmc.auth.*;
 import com.oracle.bmc.objectstorage.ObjectStorage;
 import com.oracle.bmc.objectstorage.ObjectStorageClient;
 import com.oracle.bmc.objectstorage.requests.GetObjectRequest;
@@ -21,7 +20,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.*;
-import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 
@@ -34,18 +32,19 @@ public class FacesFunctions {
 
     private final CascadeClassifier faceClassifier;
     private final BufferedImage sombrero;
-    private final ObjectStorage objectStoreClient;
+    private final BufferedImage moustache;
+    private ObjectStorage objectStoreClient;
     private final String outputBucketName;
 
     public FacesFunctions(RuntimeContext ctx) throws IOException {
         faceClassifier = new CascadeClassifier();
         if (!faceClassifier.load("data/haarcascade_frontalface_alt.xml")) {
+            System.err.println("can't load config xml");
             throw new RuntimeException("Failed to load face classifier ");
         }
         sombrero = ImageIO.read(new File("data/sombrero.png"));
-        objectStoreClient = createObjectStoreClient(ctx);
+        moustache = ImageIO.read(new File("data/moustache.png"));
         outputBucketName = reqEnv(ctx, "OUTPUT_BUCKET");
-
     }
 
     private String reqEnv(RuntimeContext ctx, String key) {
@@ -53,32 +52,19 @@ public class FacesFunctions {
 
     }
 
-    private ObjectStorage createObjectStoreClient(RuntimeContext ctx) {
+    private ObjectStorage createObjectStoreClient() {
         System.out.println("Inside createObjectStoreClient");
-
         ObjectStorage objStoreClient = null;
 
         try {
-            String privateKey = reqEnv(ctx, "OCI_PRIVATE_KEY");
-            byte[] decoded = Base64.getDecoder().decode(privateKey);
-            com.google.common.base.Supplier<InputStream> privateKeyFromEnv = () -> new ByteArrayInputStream(decoded);
-
-            AuthenticationDetailsProvider provider
-              = SimpleAuthenticationDetailsProvider.builder()
-              .tenantId(reqEnv(ctx, "OCI_TENANCY"))
-              .userId(reqEnv(ctx, "OCI_USER"))
-              .fingerprint(reqEnv(ctx, "OCI_KEY_FINGERPRINT"))
-              .privateKeySupplier(privateKeyFromEnv)
-              .build();
-
-            System.err.println("AuthenticationDetailsProvider setup");
+            ResourcePrincipalAuthenticationDetailsProvider provider
+                    = ResourcePrincipalAuthenticationDetailsProvider.builder()
+                    .build();
+            System.err.println("ResourcePrincipalAuthenticationDetailsProvider setup");
 
             objStoreClient = new ObjectStorageClient(provider);
-            objStoreClient.setRegion(reqEnv(ctx, "OCI_REGION"));
-            //objStoreClient.setRegion(reqEnv("REGION"));
-
-
             System.out.println("ObjectStorage client setup");
+
         } catch (Exception ex) {
             System.err.println("Exception in FDK " + ex.getMessage());
             ex.printStackTrace();
@@ -116,11 +102,9 @@ public class FacesFunctions {
                 faces.release();
             }
 
-
         } finally {
             frame.release();
         }
-
 
     }
 
@@ -152,25 +136,42 @@ public class FacesFunctions {
 
 
     public String handleRequest(@InputBinding(coercion = OCIEventBinding.class) ObjectStorageObjectEvent event) {
+        System.err.println("Got a new event: " + event.toString());
 
-        BufferedImage img = loadImage(event.getNamespace(), event.getBucketName(), event.getDisplayName());
-        List<Rect> faceRectangles = detectFaces(img);
-        // Sort the face boxes by size smallest to largest (for Z-order)
-        faceRectangles.sort(Comparator.comparingInt(a -> a.width));
+        try {
+            objectStoreClient = createObjectStoreClient();
+            String namespace = event.additionalDetails.namespace;
+            String bucketName = event.additionalDetails.bucketName;
+            String resourceName = event.resourceName;
 
-        Graphics2D g = img.createGraphics();
-        for (Rect r : faceRectangles) {
-            System.err.println("Found rect " + r);
-            double sombreroRatio = (double) sombrero.getWidth() / (double) sombrero.getHeight();
-            double hatWidth = r.width * 2.3;
-            double hatHeight = hatWidth / sombreroRatio;
+            BufferedImage img = loadImage(namespace, bucketName, resourceName);
+            List<Rect> faceRectangles = detectFaces(img);
+            // Sort the face boxes by size smallest to largest (for Z-order)
+            faceRectangles.sort(Comparator.comparingInt(a -> a.width));
 
-            g.drawImage(sombrero, (int) ((double) r.x - ((hatWidth - r.width) / 2.0)), r.y - (int) hatHeight + (int) (r.height * .3), (int) hatWidth, (int) hatHeight, null);
+            Graphics2D g = img.createGraphics();
+            for (Rect r : faceRectangles) {
+                System.err.println("Found rect " + r);
+                double sombreroRatio = (double) sombrero.getWidth() / (double) sombrero.getHeight();
+                double hatWidth = r.width * 2.3;
+                double hatHeight = hatWidth / sombreroRatio;
+
+                double moustacheRatio = (double) moustache.getWidth() / (double) moustache.getHeight();
+                double stacheWidth = r.width;
+                double stacheHeight = stacheWidth / moustacheRatio;
+
+                g.drawImage(sombrero, (int) ((double) r.x - ((hatWidth - r.width) / 2.0)), r.y - (int) hatHeight + (int) (r.height * .3), (int) hatWidth, (int) hatHeight, null);
+                g.drawImage(moustache, (int) ((double) r.x - ((stacheWidth - r.width) / 2.0)), r.y - (int) stacheHeight + (int) (r.height * 1.4), (int) stacheWidth, (int) stacheHeight, null);
+            }
+            g.dispose();
+            writeImage(img, namespace, outputBucketName, resourceName);
+            System.err.println("found " + faceRectangles.size() + " faces on object " + resourceName);
+            return "ok";
+        } catch (Exception ex) {
+            System.err.println("Exception in FDK " + ex.getMessage());
+            ex.printStackTrace();
+            return "oops";
         }
-        g.dispose();
-        writeImage(img, event.getNamespace(), outputBucketName, event.getDisplayName());
-        System.err.println("found " + faceRectangles.size() + " faces on object " + event.getDisplayName());
-        return "ok";
     }
 
 }
