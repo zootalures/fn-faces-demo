@@ -23,32 +23,23 @@ public class OCIEventBinding implements InputCoercion<Object> {
         if (CloudEvent.class.equals(paramType.getParameterClass()) || ObjectStorageObjectEvent.class.equals(paramType.getParameterClass())) {
             // TODO, verify content type etc.
             CloudEvent ce = inputEvent.consumeBody((is) -> {
-                  try {
-                      return myObjectMapper.readValue(is, CloudEvent.class);
-                  } catch (IOException e) {
-                      throw new RuntimeException("Failed to extract cloud event",e);
-                  }
-              }
+                    try {
+                        return myObjectMapper.readValue(is, CloudEvent.class);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to extract cloud event", e);
+                    }
+                }
             );
 
-            if (CloudEvent.class.equals(paramType.getParameterClass())){
+            if (CloudEvent.class.equals(paramType.getParameterClass())) {
                 return Optional.of(ce);
-            }
-            if (ce.data.isObject()) {
-                // TODO verify/dispatch on event type
-                try{
-                    return Optional.of(myObjectMapper.treeToValue(ce.data,ObjectStorageObjectEvent.class));
-                }catch(JsonProcessingException e){
-                    throw new RuntimeException("Failed to read object event",e);
-                }
-            }else if (ce.data.isTextual()){
-                try{
-                    return Optional.of(myObjectMapper.readValue(ce.data.asText(),ObjectStorageObjectEvent.class));
-                }catch(Exception e){
-                    throw new RuntimeException("Failed to read object event",e);
+            } else if (ObjectStorageObjectEvent.class.equals(paramType.getParameterClass())) {
+                try {
+                    return Optional.of(myObjectMapper.treeToValue(ce.data, ObjectStorageObjectEvent.class));
+                } catch (JsonProcessingException e) {
+                    return Optional.empty();
                 }
             }
-
         }
         return Optional.empty();
     }
