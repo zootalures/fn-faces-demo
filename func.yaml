@@ -4,7 +4,4 @@ version: 0.0.53
 runtime: java
 cmd: com.example.fn.FacesFunctions::handleRequest
 memory: 1024
-triggers:
-- name: faces
-  type: http
-  source: /faces
+

@@ -2,13 +2,16 @@ FROM fnproject/fn-java-fdk-build:jdk11-1.0.100 as build-stage
 WORKDIR /function
 
 ADD pom.xml /function/pom.xml
-RUN ["mvn", "package", "dependency:copy-dependencies", "-DincludeScope=runtime", "-DskipTests=true", "-Dmdep.prependGroupId=true", "-DoutputDirectory=target", "--fail-never"]
+RUN ["mvn", "package", "dependency:copy-dependencies", "-DincludeScope=runtime", "-DskipTests=true", "-Dmdep.prependGroupId=true", "-DoutputDirectory=target"]
 
+RUN mkdir /tmp/opencv
+RUN ["mvn", "package", "dependency:copy-dependencies", "-DincludeScope=provided", "-DskipTests=true", "-Dmdep.prependGroupId=true", "-DoutputDirectory=/tmp/opencv"]
+RUN ls -lR /tmp/opencv
 
 # Extract the pre-compiled binary out of the openCV dep ,delete it and the other binaries to reduce footprint
 RUN mkdir -p /opencv/jar && \
     cd /opencv/jar && \
-    jar xvf /usr/share/maven/ref/repository/org/openpnp/opencv/3.2.0-0/opencv-3.2.0-0.jar  && \
+    jar xvf /tmp/opencv/org.openpnp.opencv-3.2.0-0.jar  && \
     mv nu/pattern/opencv/linux/x86_64/libopencv_java320.so /usr/lib/ && \
     rm -r nu/pattern/opencv && \
     jar cvf ../opencv_min.jar .
