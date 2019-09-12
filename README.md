@@ -1,6 +1,6 @@
 # Functions Face recognition demo
 
-This is a demo of Oracle Functions integrated with Triggers in the Oracle Cloud Object Store
+This is a demo of Oracle Functions integrated with OCI Events in the Oracle Cloud Object Store.
 
 ##  Talking points
 
